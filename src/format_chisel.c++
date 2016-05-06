@@ -41,28 +41,34 @@ format_chisel::~format_chisel(void)
             return n->name();
         };
 
-    fprintf(_circuit, "import Chisel._;\n");
+    const auto prolog = R"(
 
-    /* Generate a test harness. */
-    fprintf(_circuit, "object Torture {\n");
-    fprintf(_circuit, "  def main(args: Array[String]): Unit = {\n");
-    fprintf(_circuit, "    chiselMain(args, () => Module(new Torture()));\n");
-    fprintf(_circuit, "  }\n");
-    fprintf(_circuit, "}\n");
+import Chisel._
 
-    fprintf(_circuit, "class Torture extends Module {\n");
+object Torture {
+  def main(args: Array[String]): Unit = {
+    val circuit = Chisel.Driver.elaborate(() => new Torture())
+    val circuitString = circuit.emit
+//    println(circuitString)
+    val dummy = new TortureTester(circuitString)
+  }
+}
+
+class Torture extends Module {
+)";
+    fprintf(_circuit, prolog);
 
     /* Write all the input and output into a class.  Everything is
      * emitted as a Bits because */
     fprintf(_circuit, "  class IO extends Bundle {\n");
     for (const auto& n: _inputs) {
-        fprintf(_circuit, "    val %s = Bits(INPUT, width=" SIZET_FORMAT ");\n",
+        fprintf(_circuit, "    val %s = Bits(INPUT, width=" SIZET_FORMAT ")\n",
                 mangle_io_name(n).c_str(),
                 n->width()
             );
     }
     for (const auto& n: _outputs) {
-        fprintf(_circuit, "    val %s = Bits(OUTPUT, width=" SIZET_FORMAT");\n",
+        fprintf(_circuit, "    val %s = Bits(OUTPUT, width=" SIZET_FORMAT")\n",
                 mangle_io_name(n).c_str(),
                 n->width()
             );
@@ -70,18 +76,18 @@ format_chisel::~format_chisel(void)
     fprintf(_circuit, "  }\n");
 
     /* Emit that class that we just generated. */
-    fprintf(_circuit, "  val io = new IO();\n");
+    fprintf(_circuit, "  val io = new IO()\n");
 
     /* Now go ahead and try to emit every computation. */
     for (const auto& in: _inputs) {
         /* While input nodes don't _actually_ need to do anything, if
          * we don't do this then we'll need to prefix all input nodes
          * with "io.".  Essentially this is just name mangling. */
-        fprintf(_circuit, "  val %s = Bits(width = " SIZET_FORMAT ");\n",
+        fprintf(_circuit, "  val %s = Wire(Bits(width = " SIZET_FORMAT "))\n",
                 in->short_chisel_name().c_str(),
                 in->width()
             );
-        fprintf(_circuit, "  %s := io.%s;\n",
+        fprintf(_circuit, "  %s := io.%s\n",
                 in->short_chisel_name().c_str(),
                 mangle_io_name(in).c_str()
             );
@@ -96,7 +102,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::REG:
-            fprintf(_circuit, "  val %s = Reg(init = Bits(0, width = " SIZET_FORMAT "));\n",
+            fprintf(_circuit, "  val %s = Reg(init = Bits(0, width = " SIZET_FORMAT "))\n",
                     op->d()->short_chisel_name().c_str(),
                     op->d()->width()
                 );
@@ -114,7 +120,7 @@ format_chisel::~format_chisel(void)
         case libflo::opcode::NOT:
         case libflo::opcode::RSH:
         case libflo::opcode::XOR:
-            fprintf(_circuit, "  val %s = Bits(width = " SIZET_FORMAT ");\n",
+            fprintf(_circuit, "  val %s = Wire(Bits(width = " SIZET_FORMAT "))\n",
                     op->d()->short_chisel_name().c_str(),
                     op->d()->width()
                 );
@@ -126,7 +132,7 @@ format_chisel::~format_chisel(void)
         case libflo::opcode::LT:
         case libflo::opcode::LTE:
         case libflo::opcode::NEQ:
-            fprintf(_circuit, "  val %s = Bits(width = 1);\n",
+            fprintf(_circuit, "  val %s = Wire(Bits(width = 1))\n",
                     op->d()->short_chisel_name().c_str()
                 );
             break;
@@ -174,7 +180,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::ADD:
-            fprintf(_circuit, "  %s := (UInt(%s) + UInt(%s)).toBits;\n",
+            fprintf(_circuit, "  %s := %s + %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -182,7 +188,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::AND:
-            fprintf(_circuit, "  %s := %s & %s;\n",
+            fprintf(_circuit, "  %s := %s & %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -190,7 +196,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::CAT:
-            fprintf(_circuit, "  %s := Cat(%s, %s);\n",
+            fprintf(_circuit, "  %s := Cat(%s, %s)\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -198,7 +204,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::DIV:
-            fprintf(_circuit, "  %s := %s / %s;\n",
+            fprintf(_circuit, "  %s := %s / %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -206,7 +212,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::EQ:
-            fprintf(_circuit, "  %s := %s === %s;\n",
+            fprintf(_circuit, "  %s := %s === %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -214,7 +220,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::GT:
-            fprintf(_circuit, "  %s := %s > %s;\n",
+            fprintf(_circuit, "  %s := %s > %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -222,7 +228,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::GTE:
-            fprintf(_circuit, "  %s := %s >= %s;\n",
+            fprintf(_circuit, "  %s := %s >= %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -230,14 +236,14 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::LOG2:
-            fprintf(_circuit, "  %s := Log2(%s);\n",
+            fprintf(_circuit, "  %s := Log2(%s)\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str()
                 );
             break;
 
         case libflo::opcode::LT:
-            fprintf(_circuit, "  %s := %s < %s;\n",
+            fprintf(_circuit, "  %s := %s < %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -245,7 +251,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::LTE:
-            fprintf(_circuit, "  %s := %s <= %s;\n",
+            fprintf(_circuit, "  %s := %s <= %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -253,7 +259,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::LSH:
-            fprintf(_circuit, "  %s := (UInt(%s) << UInt(%s)).toBits;\n",
+            fprintf(_circuit, "  %s := %s << %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -261,14 +267,14 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::MOV:
-            fprintf(_circuit, "  %s := %s;\n",
+            fprintf(_circuit, "  %s := %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str()
                 );
             break;
 
         case libflo::opcode::MUX:
-            fprintf(_circuit, "  %s := Mux(%s === UInt(1), %s, %s);\n",
+            fprintf(_circuit, "  %s := Mux(%s === UInt(1), %s, %s)\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str(),
@@ -277,14 +283,14 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::NEG:
-            fprintf(_circuit, "  %s := -%s;\n",
+            fprintf(_circuit, "  %s := -%s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str()
                 );
             break;
 
         case libflo::opcode::NEQ:
-            fprintf(_circuit, "  %s := %s != %s;\n",
+            fprintf(_circuit, "  %s := %s != %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -292,21 +298,21 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::NOT:
-            fprintf(_circuit, "  %s := ~%s;\n",
+            fprintf(_circuit, "  %s := ~%s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str()
                 );
             break;
 
         case libflo::opcode::REG:
-            fprintf(_circuit, "  %s := %s;\n",
+            fprintf(_circuit, "  %s := %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
                 );
             break;
 
         case libflo::opcode::RSH:
-            fprintf(_circuit, "  %s := (UInt(%s) >> UInt(%s)).toBits;\n",
+            fprintf(_circuit, "  %s := %s >> %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -314,7 +320,7 @@ format_chisel::~format_chisel(void)
             break;
 
         case libflo::opcode::XOR:
-            fprintf(_circuit, "  %s := %s ^ %s;\n",
+            fprintf(_circuit, "  %s := %s ^ %s\n",
                     op->d()->short_chisel_name().c_str(),
                     op->s()->short_chisel_name().c_str(),
                     op->t()->short_chisel_name().c_str()
@@ -347,7 +353,7 @@ format_chisel::~format_chisel(void)
     }
 
     for (const auto& out: _outputs) {
-        fprintf(_circuit, "  io.%s := %s;\n",
+        fprintf(_circuit, "  io.%s := %s\n",
                 mangle_io_name(out).c_str(),
                 out->short_chisel_name().c_str()
             );

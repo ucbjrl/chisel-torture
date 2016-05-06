@@ -100,10 +100,15 @@ int main(int argc, const char **argv)
     auto args = torture_args(argc, argv);
 
 #if defined(FLO)
-    FILE *cir = fopen("Torture.flo", "w");
+    const char * textFileName = "Torture.flo";
 #elif defined(CHISEL)
-    FILE *cir = fopen("Torture.scala", "w");
+    const char * textFileName = "Torture.scala";
 #endif
+    FILE *cir = fopen(textFileName, "w");
+    if (cir == NULL) {
+    	perror(textFileName);
+    	exit(EXIT_FAILURE);
+    }
     FILE *vcd = fopen("Torture.vcd", "w");
 
 #if defined(FLO)
