@@ -42,17 +42,9 @@ format_chisel::~format_chisel(void)
         };
 
     const auto prolog = R"(
+package torture
 
 import Chisel._
-
-object Torture {
-  def main(args: Array[String]): Unit = {
-    val circuit = Chisel.Driver.elaborate(() => new Torture())
-    val circuitString = circuit.emit
-//    println(circuitString)
-    val dummy = new TortureTester(circuitString)
-  }
-}
 
 class Torture extends Module {
 )";
