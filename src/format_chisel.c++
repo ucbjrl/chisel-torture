@@ -49,18 +49,21 @@ import Chisel._
 )";
     fprintf(_circuit, prolog);
 #if FIRRTL
-    const auto writeFirrtl = R"("
+    const auto writeFirrtl = R"(
+import java.nio.file.{Files,Paths}
+import java.nio.charset.StandardCharsets
+
 object Torture {
   def main(args: Array[String]): Unit = {
     val circuit = Chisel.Driver.elaborate(() => new Torture())
     val circuitString = circuit.emit
-    scala.tools.nsc.io.File("Torture.firrtl").writeAll(circuitString)
+    Files.write(Paths.get("Torture.firrtl"), circuitString.getBytes(StandardCharsets.US_ASCII))
   }
 }
-    fprintf(_circuit, writeFirrtl);
  )";
+    fprintf(_circuit, writeFirrtl);
 #endif
-    const auto epilog = R"("
+    const auto epilog = R"(
 
 class Torture extends Module {
 )";

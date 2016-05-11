@@ -35,8 +35,8 @@ CONFIG      += auto_patterns
 CONFIG      += auto_seed
 
 BINARIES    += firrtl-torture
-SOURCES     += torture.c++
 COMPILEOPTS += -DCHISEL -DFIRRTL
+SOURCES     += torture.c++
 CONFIG      += auto_patterns
 CONFIG      += auto_seed
 
