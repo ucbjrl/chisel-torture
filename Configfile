@@ -26,11 +26,17 @@ LANGUAGES   += bash
 
 GENERATE    += version.h
 
-# A Chisel (and Flo) torture tester.  This mixes together different
+# A Chisel, FIRRTL (and Flo) torture tester.  This mixes together different
 # Chisel patterns and produces a large Chisel graph.
 BINARIES    += chisel-torture
 SOURCES     += torture.c++
 COMPILEOPTS += -DCHISEL
+CONFIG      += auto_patterns
+CONFIG      += auto_seed
+
+BINARIES    += firrtl-torture
+SOURCES     += torture.c++
+COMPILEOPTS += -DCHISEL -DFIRRTL
 CONFIG      += auto_patterns
 CONFIG      += auto_seed
 

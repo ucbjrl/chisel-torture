@@ -46,9 +46,25 @@ package torture
 
 import Chisel._
 
-class Torture extends Module {
 )";
     fprintf(_circuit, prolog);
+#if FIRRTL
+    const auto writeFirrtl = R"("
+object Torture {
+  def main(args: Array[String]): Unit = {
+    val circuit = Chisel.Driver.elaborate(() => new Torture())
+    val circuitString = circuit.emit
+    scala.tools.nsc.io.File("Torture.firrtl").writeAll(circuitString)
+  }
+}
+    fprintf(_circuit, writeFirrtl);
+ )";
+#endif
+    const auto epilog = R"("
+
+class Torture extends Module {
+)";
+   fprintf(_circuit, epilog);
 
     /* Write all the input and output into a class.  Everything is
      * emitted as a Bits because */
